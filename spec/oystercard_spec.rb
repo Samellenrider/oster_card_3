@@ -17,17 +17,12 @@ describe Oystercard do
     expect { oystercard.top_up(1) }.to raise_error('Top up limit exceeded!')
   end
 
-  it 'withdrawls money from the card' do
-    t = Oystercard.new
-    balance = t.balance
-    expect(t.deduct(50)).to eq(balance - 50)
-  end
-
   it 'checks if balance is bigger than max_value' do
     expect(subject.max?).not_to be true
   end
 
   it 'tells if we touched in' do
+    subject.top_up(1)
     expect(subject.touch_in).to eq true
   end
 
@@ -40,4 +35,15 @@ describe Oystercard do
     t = Oystercard.new
     expect(t.touch_out).not_to eq(t.in_use)
   end
+  
+  it "error when touch in balance = 0" do
+    t = Oystercard.new
+    expect{ t.touch_in }.to raise_error ("Not enough money to travel.")
+  end
+
+  it "reduces balance by minimal amount" do
+    t =Oystercard.new
+    expect { t.touch_out }.to change{t.balance}.by(-1)
+  end
+  
 end
