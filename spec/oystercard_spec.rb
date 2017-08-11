@@ -1,95 +1,94 @@
 require 'oystercard'
-require 'station'
-describe Oystercard do
-  # let(:station) { double :station }
-  it 'initializes with a zero balance' do
-    expect(described_class.new.balance).to eq 0
+
+RSpec.describe Oystercard do
+  subject { Oystercard.new }
+
+  let(:entry_station) { double :entry_station }
+  let(:exit_station) { double :exit_station }
+
+  it 'checks if the Oyster has balance 0' do
+    expect(subject.balance).to eq 0
   end
-  it 'can top up the balance' do
-    subject.top_up(20)
-    expect(subject.balance).to eq 20
+
+  it 'tops up with 1 argument' do
+    expect(subject.respond_to?(:top_up)).to be true
   end
-  it 'can top up the balance' do
-    expect { subject.top_up 1 }.to change { subject.balance }.by 1
+
+  it 'raises and error if we exceed the max limit' do
+    oystercard = Oystercard.new
+    value = oystercard.top_up(91)
+    expect { oystercard.top_up(1) }.to raise_error('Top up limit exceeded!')
   end
-  it 'cannot be touched in without a minimun balance of £1' do
-    # min_bal = described_class::MIN_BAL
-    subject.top_up(0.5)
-    station = Station.new("Paddington", 1)
-    expect { subject.touch_in(station) }.to raise_error "Insufficient funds to touch in, balance must be more than/
-    #{MIN_BAL}"
+
+  it 'checks if balance is bigger than max_value' do
+    expect(subject.max?).not_to be true
   end
-  it 'raises an error if balance exceeds 90' do
-    max_lim = described_class::MAXIMUM_LIMIT
-    card = described_class.new
-    card.top_up(max_lim)
-    expect { card.top_up 1 }.to raise_error "Max balance £#{max_lim} exceeded"
+
+  it 'tells if we touched in' do
+    t = Oystercard.new
+    t.top_up(1)
+    station = Station.new("Kings cross", 1)
+    t.touch_in(station)
+    expect(t.journey_list).to eq([{in: "Kings cross", out: nil}])
   end
-  it 'is in journey' do
-    expect(subject).to respond_to(:in_journey?)
+
+  it "says wer're not in journey" do
+    t = Oystercard.new
+    expect(t.in_journey?).to be false
   end
-  it 'has a default status of not in use' do
-    expect(subject.in_journey?).to eq 'not in use'
+
+  it "tells we're in journey" do
+    t = Oystercard.new
+    t.top_up(1)
+    t.touch_in(:entry_station)
+    expect(t.in_journey?).to eq(true)
   end
-  # let(:station) { double :station }
-  it 'can record touch in station' do
-    subject.top_up(5)
-    station = Station.new("Paddington", 1)
-    # allow(station).to receive_messages(name: "Paddington", zone: 1)
-    subject.touch_in(station)
-    expect(subject.journeys).to eq([{ in: station, out: nil }])
+
+  it 'tells if we touched out' do
+    t = Oystercard.new
+    t.top_up(1)
+    t.touch_in(:entry_station)
+    t.touch_out(:exit_station)
+    expect(t.exit_station).to eq(:exit_station)
   end
-  let(:station) { double :station }
-  it 'has an empty list of journeys by default' do 
-    expect(subject.journeys).to eq []
+
+  it 'error when touch in balance = 0' do
+    t = Oystercard.new
+    expect { t.touch_in(:entry_station) }.to raise_error 'Not enough money to travel.'
   end
-  context "is topped up and has touched in" do 
-    before(:each) do
-      subject.top_up(10)
-      station1 = Station.new("Paddington", 1)
-      subject.touch_in(station1)
-    end
-    it 'can deduct the balance when touching out' do
-      station2 = Station.new("Aldgate", 1)
-      expect { subject.touch_out(station2) }.to change { subject.balance }.by(-Oystercard::FARE_PER_TRIP)
-    end
-    it 'changes its status to in use after touch in' do
-      expect(subject.in_journey?).to eq 'in use'
-    end
+
+  it 'reduces balance by minimal amount' do
+    t = Oystercard.new
+    t.top_up(1)
+    expect { t.touch_out(:exit_station) }.to change { t.balance }.by(-1)
   end
-  context "has 1 complete journey" do 
-    before(:each) do
-      subject.top_up(10)
-      station1 = Station.new("Paddington", 1)
-      station2 = Station.new("Bank", 1)
-      subject.touch_in(station1)
-      subject.touch_out(station2)
-    end
-    
-    it 'will reduce the balance by a specified amount' do
-      expect(subject.balance).to eq 9
-    end
-    it 'changes its status to not in use after touch out' do
-      expect(subject.in_journey?).to eq 'not in use'
-    end
-    # it 'records journeys' do
-    #   expect(subject.journeys).to eq([{ in: "Paddington", out: "Bank" }])
-    # end
-    it 'creates one journey when touching in then out' do
-      expect(subject.journeys.length).to eq subject.trip_no
-    end
+
+  it 'adds origin destination' do
+    t = Oystercard.new
+    t.top_up(1)
+    t.touch_in(:entry_station)
+    expect(t.entry_station).to eq :entry_station
   end
-  
+
+  it 'tells card to set entry station nil' do
+    t = Oystercard.new
+    t.top_up(1)
+    t.touch_in(:entry_station)
+    t.touch_out(:exit_station)
+    expect(t.entry_station).to eq nil
+  end
+
+  it 'have an empty list of journeys' do
+    t = Oystercard.new
+    t.top_up(1)
+    expect(t.journey_list).to eq []
+  end
+
+  it 'checks if touching in + touching out creates journey' do
+    t = Oystercard.new
+    t.top_up(1)
+    t.touch_in(:entry_station)
+    t.touch_out(:exit_station)
+    expect(t.journey_list).to eq t.journey_list.push(
+  end
 end
-Add Comment Collapse
-
-
-
-2 new messages since 1:05 PM
-Mark as read (esc)
-
-Message Olivia Frost
-
-Thread
-Stephen Geller, Abi Travers, and Rolando Sorbelli
-
